@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+        # architecture: x64
     - uses: messense/maturin-action@v1
       with:
         manylinux: 2014
