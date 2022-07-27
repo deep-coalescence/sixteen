@@ -3,7 +3,7 @@ requires = ["maturin>=0.13,<0.14"]
 build-backend = "maturin"
 
 [project]
-name = "fifteen"
+name = "table_five"
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Rust",

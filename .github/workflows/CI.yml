@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PACKAGE_NAME: fifteen
+  PACKAGE_NAME: table_five
   PYTHON_VERSION: "3.7" # to build abi3 wheels
 
 jobs:
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [aarch64, armv7, s390x, ppc64le, ppc64]
+        target: [aarch64, armv7]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
