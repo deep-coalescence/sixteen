@@ -33,7 +33,9 @@ impl TreeSet {
                 lca.rev[transl.3],
                 lca.rev[transl.4],
             ];
-            if quintet.iter().any(|it| *it == 0) {continue;}
+            if quintet.iter().any(|it| *it == 0) {
+                continue;
+            }
             if let Some(t) = lca.retrieve_topology(&quintet) {
                 res[t as usize] += 1;
             }

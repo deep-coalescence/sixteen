@@ -4,10 +4,12 @@ pub use lca::*;
 use ogcat::ogtree::TreeCollection;
 // extern crate fifteen;
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let collection = TreeCollection::from_newick("res/quintets.tre")?;
+    let collection = TreeCollection::from_newick("res/avian.tre")?;
     let wrapped = TreeCollectionWithLCA::from_tree_collection(collection);
-    let (one, two, three, four, five) = wrapped.translate_taxon_names(("1", "2", "3", "4", "5"));
-    for i in &wrapped.lca {
+    let (one, two, three, four, five) =
+        wrapped.translate_taxon_names(("PYGAD", "COLLI", "TINMA", "CUCCA", "MANVI"));
+    for (e, i) in wrapped.lca.iter().enumerate() {
+        println!("==========");
         let quintet = [
             i.rev[one],
             i.rev[two],
@@ -15,7 +17,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             i.rev[four],
             i.rev[five],
         ];
-        println!("{:?}", i.retrieve_topology(&quintet));
+        let r = i.retrieve_topology(&quintet);
+        if r.is_none() {
+            println!("******");
+            println!("{} {:?}", e + 1, i.retrieve_topology(&quintet));
+        } else {
+            println!("{} {:?}", e + 1, r);
+        }
+        break;
     }
     Ok(())
 }

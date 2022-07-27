@@ -1,7 +1,6 @@
 use halfbrown::{hashmap, HashMap};
 use ndarray::{array, Array, ArrayBase, Ix2, ShapeBuilder};
 use ogcat::ogtree::{TaxonSet, Tree, TreeCollection};
-use pyo3::prelude::*;
 use smallvec::{smallvec, SmallVec};
 
 fn bip(b: u8) -> u8 {
@@ -49,14 +48,11 @@ pub struct TreeLCA {
 }
 
 impl TreeLCA {
-    /// return the LCA (and its depth) of two taxa (not by the canonical taxon ID but by euler tour first appearance)
+    /// return the LCA (by euler ID and its depth) of two taxa (not by the canonical taxon ID but by euler tour first appearance)
     pub fn lca(&self, lhs: u32, rhs: u32) -> (u32, u32) {
         let (u, v) = if lhs < rhs { (lhs, rhs) } else { (rhs, lhs) };
         let min_ix = self.rmq(u, v);
-        (
-            self.euler_tour[min_ix as usize],
-            self.depths[min_ix as usize],
-        )
+        (min_ix as u32, self.depths[min_ix as usize])
     }
 
     /// range minimum query on the depths array (inclusive range), returns the ix of the minimum depth
@@ -145,17 +141,25 @@ impl TreeLCA {
         let mut next_deepest_pair = (lookable.peek().unwrap().0, lookable.peek().unwrap().1);
         let mut next_depth = lookable.peek().unwrap().3;
         let mut next_deepest_lca = lookable.peek().unwrap().2;
-        let mut next_deep_mult: HashMap<u32, u8> = hashmap! {next_deepest_lca => 1};
+        let mut next_deep_mult: HashMap<u32, u8> =
+            if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
+                hashmap! {next_deepest_lca => 1}
+            } else {
+                hashmap! {}
+            };
         for (i, j, nid, depth) in lookable.skip(1) {
             if *depth > next_depth {
                 next_deep_mult.clear();
                 next_deepest_pair = (*i, *j);
                 next_depth = *depth;
-                next_deepest_lca = *nid;
-                next_deep_mult.insert(cur_deepest_lca, 1);
+                if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
+                    next_deep_mult.insert(cur_deepest_lca, 1);
+                }
             } else if *depth == next_depth {
-                let mut mult = next_deep_mult.entry(*nid).or_insert(0);
-                *mult += 1;
+                if *i != 5 && *j != 5 {
+                    let mut mult = next_deep_mult.entry(*nid).or_insert(0);
+                    *mult += 1;
+                }
             }
         }
         // println!("next_deep_mult {:?}", next_deep_mult);
