@@ -19,7 +19,7 @@ jobs:
       with:
         manylinux: 2014
         command: build
-        args: -i python --release --sdist -o dist
+        args: -i python3 --release --sdist -o dist
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
