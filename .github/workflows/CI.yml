@@ -12,6 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v2
+      id: cpy
       with:
         python-version: 3.7
         # architecture: x64
@@ -19,7 +20,7 @@ jobs:
       with:
         manylinux: 2014
         command: build
-        args: -i python3 --release --sdist -o dist
+        args: -i '${{ steps.cpy.outputs.python-path }}' --release --sdist -o dist
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
