@@ -25,7 +25,7 @@ impl TreeSet {
     pub fn tally_single_quintet(&self, names: (&str, &str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 15];
         let transl = self.data.translate_taxon_names(names);
-        for lca in &self.data.lca {
+        for (i, lca) in self.data.lca.iter().enumerate() {
             let quintet = [
                 lca.rev[transl.0],
                 lca.rev[transl.1],
@@ -36,6 +36,7 @@ impl TreeSet {
             if quintet.iter().any(|it| *it == 0) {
                 continue;
             }
+            // println!("> {:?}", i);
             if let Some(t) = lca.retrieve_topology(&quintet) {
                 res[t as usize] += 1;
             }

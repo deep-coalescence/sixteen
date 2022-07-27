@@ -75,12 +75,22 @@ impl TreeLCA {
     }
 
     /// fast log2 implemention TODO: make it fast
+    #[inline]
     pub fn lg2(u: u32) -> u32 {
-        (u as f64).log2() as u32
+        //(u as f64).log2() as u32
+        u32::BITS - u.leading_zeros() - 1
+    }
+
+    pub fn lg2_usize(u: usize) -> u32 {
+        usize::BITS - u.leading_zeros() - 1
     }
 
     pub fn mk_bip(u: u8, v: u8) -> u8 {
         bip(0b00000 | (1 << (4 - u)) | (1 << (4 - v)))
+    }
+
+    pub fn mk_bip3(x: u8, y: u8, z: u8) -> u8 {
+        bip(0b00000 | (1 << (4 - x)) | (1 << (4 - y)) | (1 << (4 - z)))
     }
 
     pub fn retrieve_topology(&self, eids: &[u32; 5]) -> Option<u8> {
@@ -95,7 +105,7 @@ impl TreeLCA {
         let mut cur_deepest_pair = (v[0].0, v[0].1);
         let mut cur_depth = v[0].3;
         let mut cur_deepest_lca = v[0].2;
-        let mut cur_deep_mult: HashMap<u32, u8> = hashmap! {cur_deepest_lca => 1};
+        let mut cur_deep_mult: HashMap<u32, u8> = hashmap! {self.euler_tour[cur_deepest_lca as usize] => 1};
         // println!("{:?}", v);
         for (i, j, nid, depth) in v.iter().skip(1) {
             if *depth > cur_depth {
@@ -103,15 +113,16 @@ impl TreeLCA {
                 cur_deepest_pair = (*i, *j);
                 cur_depth = *depth;
                 cur_deepest_lca = *nid;
-                cur_deep_mult.insert(cur_deepest_lca, 1);
+                cur_deep_mult.insert(self.euler_tour[cur_deepest_lca as usize], 1);
             } else if *depth == cur_depth {
-                let mut mult = cur_deep_mult.entry(*nid).or_insert(0);
+                let mut mult = cur_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
                 *mult += 1;
             }
         }
         // println!("deepest pair: {:?}", cur_deepest_pair);
         // println!("cur_deep_mult {:?}", cur_deep_mult);
         if cur_deep_mult.values().any(|it| *it > 1) {
+            // println!("early return");
             return None;
         }
         drop(cur_deep_mult);
@@ -146,42 +157,48 @@ impl TreeLCA {
         let mut next_depth = lookable.peek().unwrap().3;
         let mut next_deepest_lca = lookable.peek().unwrap().2;
         let mut next_deep_mult: HashMap<u32, u8> =
-            if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
-                hashmap! {next_deepest_lca => 1}
-            } else {
-                hashmap! {}
-            };
+            // if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
+                hashmap! {self.euler_tour[next_deepest_lca as usize] => 1}
+            // } else {
+                // hashmap! {}
+            // }
+            ;
         for (i, j, nid, depth) in lookable.skip(1) {
             if *depth > next_depth {
                 next_deep_mult.clear();
                 next_deepest_pair = (*i, *j);
+                next_deepest_lca = *nid;
                 next_depth = *depth;
-                if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
-                    next_deep_mult.insert(cur_deepest_lca, 1);
-                }
+                // if next_deepest_pair.0 != 5 && next_deepest_pair.1 != 5 {
+                next_deep_mult.insert(self.euler_tour[next_deepest_lca as usize], 1);
+                // }
             } else if *depth == next_depth {
-                if *i != 5 && *j != 5 {
-                    let mut mult = next_deep_mult.entry(*nid).or_insert(0);
-                    *mult += 1;
-                }
+                // if *i != 5 && *j != 5 {
+                let mut mult = next_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
+                *mult += 1;
+                // }
             }
         }
+        
         if next_deep_mult.values().any(|it| *it > 1) {
+            // println!("X next_deep_mult: {:?}", next_deep_mult);
             return None;
+        } else {
+            // println!("OK, next_deep_mult: {:?}", next_deep_mult);
         }
         match next_deepest_pair {
             (a, 5) => {
-                let rest: SmallVec<[usize; 2]> = eids
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, it)| {
-                        *i != a as usize
-                            && *i != cur_deepest_pair.0 as usize
-                            && *i != cur_deepest_pair.1 as usize
-                    })
-                    .map(|it| it.0)
-                    .collect();
-                bips.push(Self::mk_bip(rest[0] as u8, rest[1] as u8));
+                // let rest: SmallVec<[usize; 2]> = eids
+                //     .iter()
+                //     .enumerate()
+                //     .filter(|(i, it)| {
+                //         *i != a as usize
+                //             && *i != cur_deepest_pair.0 as usize
+                //             && *i != cur_deepest_pair.1 as usize
+                //     })
+                //     .map(|it| it.0)
+                //     .collect();
+                bips.push(Self::mk_bip3(a, cur_deepest_pair.0, cur_deepest_pair.1));
             }
             (u, v) => {
                 bips.push(Self::mk_bip(u, v));
@@ -223,7 +240,7 @@ pub fn construct_lca(taxa: &TaxonSet, tree: &Tree) -> TreeLCA {
     let n = 2 * tree.num_nodes();
     let mut timer = 0;
     euler_dfs(tree, 0, 0, &mut rev, &mut depths, &mut euler, &mut timer);
-    let k = (n as f64).log2() as usize;
+    let k = TreeLCA::lg2_usize(n) as usize;
     // sparse table
     let mut st = Array::<u32, _>::zeros((k + 1, n).f());
     for i in 0..n {
