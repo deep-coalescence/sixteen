@@ -171,7 +171,7 @@ impl TreeLCA {
         }
         match next_deepest_pair {
             (a, 5) => {
-                let rest: Vec<usize> = eids
+                let rest: SmallVec<[usize; 2]> = eids
                     .iter()
                     .enumerate()
                     .filter(|(i, it)| {
