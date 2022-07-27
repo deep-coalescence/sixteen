@@ -3,6 +3,7 @@ use ndarray::{array, Array, ArrayBase, Ix2, ShapeBuilder};
 use ogcat::ogtree::{TaxonSet, Tree, TreeCollection};
 use smallvec::{smallvec, SmallVec};
 
+/// normalize a bipartition on 5 taxa
 fn bip(b: u8) -> u8 {
     (0b11111 ^ b).min(b)
 }
@@ -40,10 +41,13 @@ fn bips_to_adr_ix(bip1: u8, bip2: u8) -> u8 {
 
 #[derive(Debug)]
 pub struct TreeLCA {
-    /// a mapping of taxa id to euler tour id
+    /// a mapping of taxa id to euler tour id (i.e, ix of first appearance)
     pub rev: Vec<u32>,
+    /// contains node ids
     pub euler_tour: Vec<u32>,
+    /// depths of nodes
     pub depths: Vec<u32>,
+    /// sparse table, only containing the indices (not actual minimum depths)
     pub sparse_table: Array<u32, Ix2>,
 }
 
@@ -162,11 +166,9 @@ impl TreeLCA {
                 }
             }
         }
-        // println!("next_deep_mult {:?}", next_deep_mult);
         if next_deep_mult.values().any(|it| *it > 1) {
             return None;
         }
-        // println!("matching!");
         match next_deepest_pair {
             (a, 5) => {
                 let rest: Vec<usize> = eids
