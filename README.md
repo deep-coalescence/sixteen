@@ -26,7 +26,7 @@ trees = TreeSet("path_to_newline_delimited_newicks.tre")
 
 #### Quintet Counting
 
-The major API is `tally_sinlge_quintet` returning a list of length 15 containing the empirical
+The major API is `tally_single_quintet` returning a list of length 15 containing the empirical
 counts of the 15 ADR unrooted quintet topology among the tree-set in $O(k)$ time:
 
 ```python
