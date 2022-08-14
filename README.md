@@ -1,16 +1,18 @@
 fifteen
 =================
 
+[![shields.io](https://img.shields.io/badge/pypi-0.0.2-violet?style=for-the-badge&logo=pypi)](https://pypi.org/project/table-five/) [![shields.io](https://img.shields.io/badge/made_with-rust-violet?style=for-the-badge&logo=rust)](https://pyo3.rs/v0.16.4/)
+
 (DBA `table_five`)
 
 Experimental library for quick quintet tallying, useful when you have a lot of quintets that somehow you don't want to count yourself.
 
 ## Usage
 
-Binary wheels are provided on PyPI
+Binary wheels are provided on PyPI for Python starting from 3.7, but note that PyPy is not supported (yet).
 
 ```
-python3 -m pip install table_five
+python3 -m pip install table-five
 ```
 
 ## API
