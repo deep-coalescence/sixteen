@@ -2,7 +2,8 @@ mod exposure;
 mod lca;
 pub use lca::*;
 use ogcat::ogtree::TreeCollection;
-// extern crate fifteen;
+
+// this is the driver code for testing during development
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collection = TreeCollection::from_newick("res/avian.tre")?;
     let wrapped = TreeCollectionWithLCA::from_tree_collection(collection);

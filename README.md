@@ -19,7 +19,7 @@ python3 -m pip install table-five
 
 ### `TreeSet`
 
-A treeset is an efficient (i.e., fast parsing) list of tree topologies. The construction is $O(k n \lg n)$ where $k$ is the number of trees and $n$ the number of taxa due to the LCA data structure initialization.
+A treeset is an efficient (i.e., fast parsing) list of tree topologies. The construction is $O(k n \lg n)$ where $k$ is the number of trees and $n$ the number of taxa. The log factor is due to the LCA data structure initialization.
 
 ```python
 from table_five import TreeSet
@@ -39,3 +39,16 @@ treeset.tally_single_quintet(('1','2','3','4','5'))
 # normalize by the number of genes in the tree-set
 new_tree_dist = np.asarray(treeset.tally_single_quintet(q_taxa)) / len(treeset)
 ```
+
+## Development and Building
+
+After installing the Rust toolchain and [Maturin](https://www.maturin.rs/), see the following commands:
+
+```bash
+# build the library
+maturin build
+# installing it locally
+maturin develop
+```
+
+See the Maturin documentation for more details.
