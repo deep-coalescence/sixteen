@@ -5,6 +5,8 @@ fifteen
 
 (DBA `table_fifth`)
 
+> This is a research fork of the original library
+
 Experimental library for quick quintet tallying, useful when you have a lot of quintets that somehow you don't want to count yourself.
 
 ## Usage
