@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PACKAGE_NAME: table_five
+  PACKAGE_NAME: table_fifth
   PYTHON_VERSION: "3.7" # to build abi3 wheels
 
 jobs:

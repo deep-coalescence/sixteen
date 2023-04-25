@@ -3,7 +3,7 @@ fifteen
 
 [![shields.io](https://img.shields.io/badge/pypi-0.0.2-violet?style=for-the-badge&logo=pypi)](https://pypi.org/project/table-five/) [![shields.io](https://img.shields.io/badge/made_with-rust-violet?style=for-the-badge&logo=rust)](https://pyo3.rs/v0.16.4/)
 
-(DBA `table_five`)
+(DBA `table_fifth`)
 
 Experimental library for quick quintet tallying, useful when you have a lot of quintets that somehow you don't want to count yourself.
 

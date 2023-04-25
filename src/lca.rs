@@ -40,11 +40,59 @@ fn bips_to_adr_ix(bip1: u8, bip2: u8) -> u8 {
 }
 
 #[derive(Debug)]
+pub struct TreeLCAExtras {
+    pub depths_branch_length: Vec<f64>,
+}
+
+impl TreeLCAExtras {
+    pub fn new(tree : &Tree, lca : &TreeLCA) -> Self {
+        let mut res = vec![0.0; lca.depths.len()];
+        // let mut stack = vec![(0usize, 0.0)];
+        // println!("{:?}", &tree.lengths);
+        // while let Some((node, branch_length)) = stack.pop() {
+        //     let euler_id = lca.euler_tour_first_appearance[node];
+        //     // println!("euler_tour_entry: {} my_entry: {}", lca.euler_tour[euler_id as usize], node);
+        //     res[euler_id as usize] = branch_length;
+        //     println!("node: {} euler_id: {}, branch_length: {}", node, euler_id, branch_length);
+        //     for c in tree.children(node) {
+        //         stack.push((c, branch_length + tree.lengths[c]));
+        //     }
+        // }
+        Self {
+            depths_branch_length: res,
+        }
+    }
+
+    pub fn branch_length_distance(&self, lca: &TreeLCA, lhs: u32, rhs: u32) -> f64 {
+        let (u, d) = lca.lca(lhs, rhs);
+        // println!("u: {}, d: {}, euler_tour[u]: {}", u, d, lca.euler_tour[u as usize]);
+        // println!("depths: {:?}", self.depths_branch_length);
+        // println!("{:?} {:?} {:?}", lca.lengths[lhs as usize], lca.lengths[rhs as usize], lca.lengths[u as usize]);
+        lca.lengths[lhs as usize] as f64 + lca.lengths[rhs as usize] as f64
+            - 2.0 * lca.lengths[u as usize] as f64
+    }
+
+    pub fn retrieve_branch_length_distances(&self, lca: &TreeLCA, eids: &[u32; 5]) -> Vec<f64> {
+        let mut res = vec![];
+        for i in 0..5 {
+            for j in (i + 1)..5 {
+                res.push(self.branch_length_distance(lca, eids[i], eids[j]));
+            }
+        }
+        res
+    }
+}
+
+#[derive(Debug)]
 pub struct TreeLCA {
     /// a mapping of taxa id to euler tour id (i.e, ix of first appearance)
     pub rev: Vec<u32>,
     /// contains node ids
     pub euler_tour: Vec<u32>,
+    /// euler tour first appearance by node id
+    pub euler_tour_first_appearance: Vec<u32>,
+    /// euler tour last appearance by node id
+    pub lengths: Vec<f64>,
     /// depths of nodes
     pub depths: Vec<u32>,
     /// sparse table, only containing the indices (not actual minimum depths)
@@ -174,21 +222,32 @@ fn euler_dfs(
     tree: &Tree,
     node: u32,
     depth: u32,
+    depth_length: f64,
     rev: &mut [u32],
     depths: &mut [u32],
     euler: &mut [u32],
+    euler_inv: &mut [u32],
+    depths_length: &mut [f64],
     timer: &mut usize,
 ) {
     euler[*timer] = node;
+    euler_inv[node as usize] = *timer as u32;
     depths[*timer] = depth;
+    depths_length[*timer] = depth_length;
     if tree.taxa[node as usize] >= 0 {
         rev[tree.taxa[node as usize] as usize] = *timer as u32;
     }
+    // if tree.childcount[node as usize] == 0 {
+    //     euler_inv2[node as usize] = *timer as u32;
+    //     return;
+    // }
     *timer += 1;
     for i in tree.children(node as usize) {
-        euler_dfs(tree, i as u32, depth + 1, rev, depths, euler, timer);
+        euler_dfs(tree, i as u32, depth + 1, depth_length + tree.lengths[i], rev, depths, euler, euler_inv, depths_length, timer);
         euler[*timer] = node;
+        // euler_inv2[node as usize] = *timer as u32;
         depths[*timer] = depth;
+        depths_length[*timer] = depth_length;
         *timer += 1;
     }
 }
@@ -197,9 +256,11 @@ pub fn construct_lca(taxa: &TaxonSet, tree: &Tree) -> TreeLCA {
     let mut rev = vec![0; taxa.len()];
     let mut depths = vec![0; 2 * tree.taxa.len()];
     let mut euler = vec![0; 2 * tree.taxa.len()];
+    let mut euler_inv = vec![0; 2 * tree.taxa.len()];
+    let mut euler_depth_length = vec![0.0; 2 * tree.taxa.len()];
     let n = 2 * tree.num_nodes();
     let mut timer = 0;
-    euler_dfs(tree, 0, 0, &mut rev, &mut depths, &mut euler, &mut timer);
+    euler_dfs(tree, 0, 0, 0.0,&mut rev, &mut depths, &mut euler, &mut euler_inv, &mut euler_depth_length, &mut timer);
     let k = TreeLCA::lg2_usize(n) as usize;
     // sparse table
     // TODO: this is extremely ugly code
@@ -233,6 +294,8 @@ pub fn construct_lca(taxa: &TaxonSet, tree: &Tree) -> TreeLCA {
     TreeLCA {
         rev,
         euler_tour: euler,
+        euler_tour_first_appearance: euler_inv,
+        lengths: euler_depth_length,
         depths,
         sparse_table: st,
     }
@@ -242,18 +305,26 @@ pub fn construct_lca(taxa: &TaxonSet, tree: &Tree) -> TreeLCA {
 pub struct TreeCollectionWithLCA {
     pub collection: TreeCollection,
     pub lca: Vec<TreeLCA>,
+    pub lca_extras: Vec<TreeLCAExtras>,
 }
 
 impl TreeCollectionWithLCA {
     pub fn from_tree_collection(collection: TreeCollection) -> Self {
-        let lcas = collection
+        let lcas : Vec<_> = collection
             .trees
             .iter()
             .map(|t| construct_lca(&collection.taxon_set, t))
             .collect();
+        let lca_extras = collection
+            .trees
+            .iter()
+            .zip(lcas.iter())
+            .map(|(t, lca)| TreeLCAExtras::new(t, lca))
+            .collect();
         Self {
             collection,
             lca: lcas,
+            lca_extras,
         }
     }
 
