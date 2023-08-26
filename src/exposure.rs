@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::TreeCollectionWithLCA;
 use ogcat::ogtree::TreeCollection;
@@ -25,7 +25,7 @@ impl TreeSet {
     pub fn tally_single_quintet(&self, names: (&str, &str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 15];
         let transl = self.data.translate_taxon_names5(names);
-        for (i, lca) in self.data.lca.iter().enumerate() {
+        for (_i, lca) in self.data.lca.iter().enumerate() {
             let quintet = [
                 lca.rev[transl.0],
                 lca.rev[transl.1],
@@ -46,7 +46,7 @@ impl TreeSet {
     pub fn tally_single_quartet(&self, names: (&str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 3];
         let transl: [usize; 4] = self.data.translate_taxon_names([names.0, names.1, names.2, names.3]);
-        for (i, lca) in self.data.lca.iter().enumerate() {
+        for (_i, lca) in self.data.lca.iter().enumerate() {
             let quartet = [
                 lca.rev[transl[0]],
                 lca.rev[transl[1]],

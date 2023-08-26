@@ -1,5 +1,5 @@
 use halfbrown::{hashmap, HashMap};
-use ndarray::{array, Array, ArrayBase, Ix2, ShapeBuilder};
+use ndarray::{Array, Ix2, ShapeBuilder};
 use ogcat::ogtree::{TaxonSet, Tree, TreeCollection};
 use smallvec::{smallvec, SmallVec};
 
@@ -71,17 +71,17 @@ pub struct TreeLCAExtras {
 }
 
 impl TreeLCAExtras {
-    pub fn new(tree : &Tree, lca : &TreeLCA) -> Self {
-        let mut res = vec![0.0; lca.depths.len()];
+    pub fn new(_tree : &Tree, lca : &TreeLCA) -> Self {
+        let res = vec![0.0; lca.depths.len()];
         Self {
             depths_branch_length: res,
         }
     }
 
     pub fn branch_length_distance(&self, lca: &TreeLCA, lhs: u32, rhs: u32) -> f64 {
-        let (u, d) = lca.lca(lhs, rhs);
-        lca.lengths[lhs as usize] as f64 + lca.lengths[rhs as usize] as f64
-            - 2.0 * lca.lengths[u as usize] as f64
+        let (u, _d) = lca.lca(lhs, rhs);
+        lca.lengths[lhs as usize] + lca.lengths[rhs as usize]
+            - 2.0 * lca.lengths[u as usize]
     }
 
     pub fn retrieve_branch_length_distances(&self, lca: &TreeLCA, eids: &[u32; 5]) -> Vec<f64> {
@@ -116,7 +116,7 @@ impl TreeLCA {
     pub fn lca(&self, lhs: u32, rhs: u32) -> (u32, u32) {
         let (u, v) = if lhs < rhs { (lhs, rhs) } else { (rhs, lhs) };
         let min_ix = self.rmq(u, v);
-        (min_ix as u32, self.depths[min_ix as usize])
+        (min_ix as u32, self.depths[min_ix])
     }
 
     /// range minimum query on the depths array (inclusive range), returns the ix of the minimum depth
@@ -124,12 +124,12 @@ impl TreeLCA {
         let j = Self::lg2(r - l + 1) as usize;
         let ix1 = self.sparse_table[[j, l as usize]] as usize;
         let ix2 = self.sparse_table[[j, (r - (1 << j) + 1) as usize]] as usize;
-        let ix = if self.depths[ix1] <= self.depths[ix2] {
+        
+        if self.depths[ix1] <= self.depths[ix2] {
             ix1
         } else {
             ix2
-        };
-        ix
+        }
     }
 
     /// fast log2 implemention TODO: make it fast
@@ -143,15 +143,15 @@ impl TreeLCA {
     }
 
     pub fn mk_bip_quintet(u: u8, v: u8) -> u8 {
-        bip5(0b00000 | (1 << (4 - u)) | (1 << (4 - v)))
+        bip5((1 << (4 - u)) | (1 << (4 - v)))
     }
 
     pub fn mk_bip_quintet3(x: u8, y: u8, z: u8) -> u8 {
-        bip5(0b00000 | (1 << (4 - x)) | (1 << (4 - y)) | (1 << (4 - z)))
+        bip5((1 << (4 - x)) | (1 << (4 - y)) | (1 << (4 - z)))
     }
 
     pub fn mk_bip_quartet(u: u8, v: u8) -> u8 {
-        bip4(0b0000 | (1 << (3 - u)) | (1 << (3 - v)))
+        bip4((1 << (3 - u)) | (1 << (3 - v)))
     }
 
     pub fn retrieve_quartet_topology(&self, eids: &[u32; 4]) -> Option<u8> {
@@ -186,7 +186,7 @@ impl TreeLCA {
         }
         drop(cur_deep_mult);
         let ix = bips4_to_ix(Self::mk_bip_quartet(cur_deepest_pair.0, cur_deepest_pair.1));
-        return Some(ix);
+        Some(ix)
     }
 
     pub fn retrieve_quintet_topology(&self, eids: &[u32; 5]) -> Option<u8> {
