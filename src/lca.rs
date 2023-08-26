@@ -71,7 +71,7 @@ pub struct TreeLCAExtras {
 }
 
 impl TreeLCAExtras {
-    pub fn new(_tree : &Tree, lca : &TreeLCA) -> Self {
+    pub fn new(_tree: &Tree, lca: &TreeLCA) -> Self {
         let res = vec![0.0; lca.depths.len()];
         Self {
             depths_branch_length: res,
@@ -80,8 +80,7 @@ impl TreeLCAExtras {
 
     pub fn branch_length_distance(&self, lca: &TreeLCA, lhs: u32, rhs: u32) -> f64 {
         let (u, _d) = lca.lca(lhs, rhs);
-        lca.lengths[lhs as usize] + lca.lengths[rhs as usize]
-            - 2.0 * lca.lengths[u as usize]
+        lca.lengths[lhs as usize] + lca.lengths[rhs as usize] - 2.0 * lca.lengths[u as usize]
     }
 
     pub fn retrieve_branch_length_distances(&self, lca: &TreeLCA, eids: &[u32; 5]) -> Vec<f64> {
@@ -124,7 +123,7 @@ impl TreeLCA {
         let j = Self::lg2(r - l + 1) as usize;
         let ix1 = self.sparse_table[[j, l as usize]] as usize;
         let ix2 = self.sparse_table[[j, (r - (1 << j) + 1) as usize]] as usize;
-        
+
         if self.depths[ix1] <= self.depths[ix2] {
             ix1
         } else {
@@ -165,7 +164,7 @@ impl TreeLCA {
         let mut cur_deepest_pair = (v[0].0, v[0].1);
         let mut cur_depth = v[0].3;
         let mut cur_deepest_lca = v[0].2;
-        let mut cur_deep_mult: HashMap<u32, u8> = 
+        let mut cur_deep_mult: HashMap<u32, u8> =
             hashmap! {self.euler_tour[cur_deepest_lca as usize] => 1}; // 1 is just a flag indicating presence
 
         // go over the rest of the LCAs
@@ -177,7 +176,9 @@ impl TreeLCA {
                 cur_deepest_lca = *nid;
                 cur_deep_mult.insert(self.euler_tour[cur_deepest_lca as usize], 1);
             } else if *depth == cur_depth {
-                let mult = cur_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
+                let mult = cur_deep_mult
+                    .entry(self.euler_tour[*nid as usize])
+                    .or_insert(0);
                 *mult += 1;
             }
         }
@@ -201,7 +202,8 @@ impl TreeLCA {
         let mut cur_deepest_pair = (v[0].0, v[0].1);
         let mut cur_depth = v[0].3;
         let mut cur_deepest_lca = v[0].2;
-        let mut cur_deep_mult: HashMap<u32, u8> = hashmap! {self.euler_tour[cur_deepest_lca as usize] => 1};
+        let mut cur_deep_mult: HashMap<u32, u8> =
+            hashmap! {self.euler_tour[cur_deepest_lca as usize] => 1};
 
         for (i, j, nid, depth) in v.iter().skip(1) {
             if *depth > cur_depth {
@@ -211,7 +213,9 @@ impl TreeLCA {
                 cur_deepest_lca = *nid;
                 cur_deep_mult.insert(self.euler_tour[cur_deepest_lca as usize], 1);
             } else if *depth == cur_depth {
-                let mult = cur_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
+                let mult = cur_deep_mult
+                    .entry(self.euler_tour[*nid as usize])
+                    .or_insert(0);
                 *mult += 1;
             }
         }
@@ -240,7 +244,8 @@ impl TreeLCA {
         let mut next_deepest_pair = (lookable.peek().unwrap().0, lookable.peek().unwrap().1);
         let mut next_depth = lookable.peek().unwrap().3;
         let mut next_deepest_lca = lookable.peek().unwrap().2;
-        let mut next_deep_mult: HashMap<u32, u8> = hashmap! {self.euler_tour[next_deepest_lca as usize] => 1};
+        let mut next_deep_mult: HashMap<u32, u8> =
+            hashmap! {self.euler_tour[next_deepest_lca as usize] => 1};
         for (i, j, nid, depth) in lookable.skip(1) {
             if *depth > next_depth {
                 next_deep_mult.clear();
@@ -249,17 +254,23 @@ impl TreeLCA {
                 next_depth = *depth;
                 next_deep_mult.insert(self.euler_tour[next_deepest_lca as usize], 1);
             } else if *depth == next_depth {
-                let mult = next_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
+                let mult = next_deep_mult
+                    .entry(self.euler_tour[*nid as usize])
+                    .or_insert(0);
                 *mult += 1;
             }
         }
-        
+
         if next_deep_mult.values().any(|it| *it > 1) {
             return None;
         }
         match next_deepest_pair {
             (a, 5) => {
-                bips.push(Self::mk_bip_quintet3(a, cur_deepest_pair.0, cur_deepest_pair.1));
+                bips.push(Self::mk_bip_quintet3(
+                    a,
+                    cur_deepest_pair.0,
+                    cur_deepest_pair.1,
+                ));
             }
             (u, v) => {
                 bips.push(Self::mk_bip_quintet(u, v));
@@ -290,7 +301,18 @@ fn euler_dfs(
     }
     *timer += 1;
     for i in tree.children(node as usize) {
-        euler_dfs(tree, i as u32, depth + 1, depth_length + tree.lengths[i], rev, depths, euler, euler_inv, depths_length, timer);
+        euler_dfs(
+            tree,
+            i as u32,
+            depth + 1,
+            depth_length + tree.lengths[i],
+            rev,
+            depths,
+            euler,
+            euler_inv,
+            depths_length,
+            timer,
+        );
         euler[*timer] = node;
         // euler_inv2[node as usize] = *timer as u32;
         depths[*timer] = depth;
@@ -307,7 +329,18 @@ pub fn construct_lca(taxa: &TaxonSet, tree: &Tree) -> TreeLCA {
     let mut euler_depth_length = vec![0.0; 2 * tree.taxa.len()];
     let n = 2 * tree.num_nodes();
     let mut timer = 0;
-    euler_dfs(tree, 0, 0, 0.0,&mut rev, &mut depths, &mut euler, &mut euler_inv, &mut euler_depth_length, &mut timer);
+    euler_dfs(
+        tree,
+        0,
+        0,
+        0.0,
+        &mut rev,
+        &mut depths,
+        &mut euler,
+        &mut euler_inv,
+        &mut euler_depth_length,
+        &mut timer,
+    );
     let k = TreeLCA::lg2_usize(n) as usize;
     // sparse table
     // TODO: this is extremely ugly code
@@ -357,7 +390,7 @@ pub struct TreeCollectionWithLCA {
 
 impl TreeCollectionWithLCA {
     pub fn from_tree_collection(collection: TreeCollection) -> Self {
-        let lcas : Vec<_> = collection
+        let lcas: Vec<_> = collection
             .trees
             .iter()
             .map(|t| construct_lca(&collection.taxon_set, t))
@@ -375,7 +408,6 @@ impl TreeCollectionWithLCA {
         }
     }
 
-
     pub fn translate_taxon_names5(
         &self,
         names: (&str, &str, &str, &str, &str),
@@ -389,10 +421,7 @@ impl TreeCollectionWithLCA {
         )
     }
 
-    pub fn translate_taxon_names<const N: usize>(
-        &self,
-        names: [&str; N],
-    ) -> [usize; N] {
+    pub fn translate_taxon_names<const N: usize>(&self, names: [&str; N]) -> [usize; N] {
         let mut res = [0; N];
         for (i, name) in names.iter().enumerate() {
             res[i] = self.collection.taxon_set.retrieve(name);

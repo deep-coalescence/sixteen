@@ -15,15 +15,23 @@ impl TreeSet {
     pub fn new(path: PathBuf) -> PyResult<Self> {
         let tc = TreeCollection::from_newick(path).expect("Failed to load tree collection");
         let wrapped = TreeCollectionWithLCA::from_tree_collection(tc);
-        Ok(Self { data: Arc::new(wrapped) })
+        Ok(Self {
+            data: Arc::new(wrapped),
+        })
     }
 
     pub fn __len__(&self) -> usize {
         self.data.collection.trees.len()
     }
-    
+
     pub fn taxa(&self) -> Vec<&str> {
-        self.data.collection.taxon_set.names.iter().map(|it| it.as_str()).collect()
+        self.data
+            .collection
+            .taxon_set
+            .names
+            .iter()
+            .map(|it| it.as_str())
+            .collect()
     }
 
     pub fn tally_single_quintet(&self, names: (&str, &str, &str, &str, &str)) -> Vec<usize> {
@@ -49,7 +57,9 @@ impl TreeSet {
 
     pub fn tally_single_quartet(&self, names: (&str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 3];
-        let transl: [usize; 4] = self.data.translate_taxon_names([names.0, names.1, names.2, names.3]);
+        let transl: [usize; 4] = self
+            .data
+            .translate_taxon_names([names.0, names.1, names.2, names.3]);
         for (_i, lca) in self.data.lca.iter().enumerate() {
             let quartet = [
                 lca.rev[transl[0]],
@@ -120,8 +130,8 @@ impl TreeSet {
 
 #[pyclass]
 pub struct SingleTree {
-    pub treeset : Arc<TreeCollectionWithLCA>,
-    pub id : usize,
+    pub treeset: Arc<TreeCollectionWithLCA>,
+    pub id: usize,
 }
 
 #[pymethods]
@@ -143,7 +153,9 @@ impl SingleTree {
     }
 
     pub fn retrieve_quartet_type(&self, names: (&str, &str, &str, &str)) -> Option<u8> {
-        let transl: [usize; 4] = self.treeset.translate_taxon_names([names.0, names.1, names.2, names.3]);
+        let transl: [usize; 4] = self
+            .treeset
+            .translate_taxon_names([names.0, names.1, names.2, names.3]);
         let lca = &self.treeset.lca[self.id];
         let quartet = [
             lca.rev[transl[0]],
@@ -157,7 +169,10 @@ impl SingleTree {
         lca.retrieve_quartet_topology(&quartet)
     }
 
-    pub fn retrieve_all_pairs_distance(&self, names: (&str, &str, &str, &str, &str)) -> Option<Vec<f64>> {
+    pub fn retrieve_all_pairs_distance(
+        &self,
+        names: (&str, &str, &str, &str, &str),
+    ) -> Option<Vec<f64>> {
         let transl = self.treeset.translate_taxon_names5(names);
         let lca = &self.treeset.lca[self.id];
         let lca_extra = &self.treeset.lca_extras[self.id];
