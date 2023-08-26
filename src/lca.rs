@@ -288,10 +288,6 @@ fn euler_dfs(
     if tree.taxa[node as usize] >= 0 {
         rev[tree.taxa[node as usize] as usize] = *timer as u32;
     }
-    // if tree.childcount[node as usize] == 0 {
-    //     euler_inv2[node as usize] = *timer as u32;
-    //     return;
-    // }
     *timer += 1;
     for i in tree.children(node as usize) {
         euler_dfs(tree, i as u32, depth + 1, depth_length + tree.lengths[i], rev, depths, euler, euler_inv, depths_length, timer);
