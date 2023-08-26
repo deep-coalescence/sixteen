@@ -4,8 +4,21 @@ use ogcat::ogtree::{TaxonSet, Tree, TreeCollection};
 use smallvec::{smallvec, SmallVec};
 
 /// normalize a bipartition on 5 taxa
-fn bip(b: u8) -> u8 {
+fn bip5(b: u8) -> u8 {
     (0b11111 ^ b).min(b)
+}
+
+const fn min(a: u8, b: u8) -> u8 {
+    if a < b {
+        a
+    } else {
+        b
+    }
+}
+
+/// normalize a bipartition on 4 taxa
+const fn bip4(b: u8) -> u8 {
+    min(0b1111 ^ b, b)
 }
 
 fn reorder_bips(a: u8, b: u8) -> (u8, u8) {
@@ -17,7 +30,7 @@ fn reorder_bips(a: u8, b: u8) -> (u8, u8) {
 }
 
 /// gives the ADR quintet index of two bipartitions (must be normalized, but can be unordered)
-fn bips_to_adr_ix(bip1: u8, bip2: u8) -> u8 {
+fn bips5_to_adr_ix(bip1: u8, bip2: u8) -> u8 {
     let (bip1, bip2) = reorder_bips(bip1, bip2);
     match (bip1, bip2) {
         (0b11, 0b111) => 0,
@@ -39,6 +52,19 @@ fn bips_to_adr_ix(bip1: u8, bip2: u8) -> u8 {
     }
 }
 
+const AB_CD: u8 = bip4(0b1100);
+const AC_BD: u8 = bip4(0b1010);
+const AD_BC: u8 = bip4(0b1001);
+
+fn bips4_to_ix(bip: u8) -> u8 {
+    match bip {
+        AB_CD => 0,
+        AC_BD => 1,
+        AD_BC => 2,
+        _ => panic!("Invalid bipartition"),
+    }
+}
+
 #[derive(Debug)]
 pub struct TreeLCAExtras {
     pub depths_branch_length: Vec<f64>,
@@ -47,17 +73,6 @@ pub struct TreeLCAExtras {
 impl TreeLCAExtras {
     pub fn new(tree : &Tree, lca : &TreeLCA) -> Self {
         let mut res = vec![0.0; lca.depths.len()];
-        // let mut stack = vec![(0usize, 0.0)];
-        // println!("{:?}", &tree.lengths);
-        // while let Some((node, branch_length)) = stack.pop() {
-        //     let euler_id = lca.euler_tour_first_appearance[node];
-        //     // println!("euler_tour_entry: {} my_entry: {}", lca.euler_tour[euler_id as usize], node);
-        //     res[euler_id as usize] = branch_length;
-        //     println!("node: {} euler_id: {}, branch_length: {}", node, euler_id, branch_length);
-        //     for c in tree.children(node) {
-        //         stack.push((c, branch_length + tree.lengths[c]));
-        //     }
-        // }
         Self {
             depths_branch_length: res,
         }
@@ -65,9 +80,6 @@ impl TreeLCAExtras {
 
     pub fn branch_length_distance(&self, lca: &TreeLCA, lhs: u32, rhs: u32) -> f64 {
         let (u, d) = lca.lca(lhs, rhs);
-        // println!("u: {}, d: {}, euler_tour[u]: {}", u, d, lca.euler_tour[u as usize]);
-        // println!("depths: {:?}", self.depths_branch_length);
-        // println!("{:?} {:?} {:?}", lca.lengths[lhs as usize], lca.lengths[rhs as usize], lca.lengths[u as usize]);
         lca.lengths[lhs as usize] as f64 + lca.lengths[rhs as usize] as f64
             - 2.0 * lca.lengths[u as usize] as f64
     }
@@ -130,15 +142,54 @@ impl TreeLCA {
         usize::BITS - u.leading_zeros() - 1
     }
 
-    pub fn mk_bip(u: u8, v: u8) -> u8 {
-        bip(0b00000 | (1 << (4 - u)) | (1 << (4 - v)))
+    pub fn mk_bip_quintet(u: u8, v: u8) -> u8 {
+        bip5(0b00000 | (1 << (4 - u)) | (1 << (4 - v)))
     }
 
-    pub fn mk_bip3(x: u8, y: u8, z: u8) -> u8 {
-        bip(0b00000 | (1 << (4 - x)) | (1 << (4 - y)) | (1 << (4 - z)))
+    pub fn mk_bip_quintet3(x: u8, y: u8, z: u8) -> u8 {
+        bip5(0b00000 | (1 << (4 - x)) | (1 << (4 - y)) | (1 << (4 - z)))
     }
 
-    pub fn retrieve_topology(&self, eids: &[u32; 5]) -> Option<u8> {
+    pub fn mk_bip_quartet(u: u8, v: u8) -> u8 {
+        bip4(0b0000 | (1 << (3 - u)) | (1 << (3 - v)))
+    }
+
+    pub fn retrieve_quartet_topology(&self, eids: &[u32; 4]) -> Option<u8> {
+        let mut v: SmallVec<[(u8, u8, u32, u32); 10]> = smallvec![];
+        for i in 0..3u8 {
+            for j in i + 1..4u8 {
+                let (nid, depth) = self.lca(eids[i as usize], eids[j as usize]);
+                v.push((i, j, nid, depth));
+            }
+        }
+        let mut cur_deepest_pair = (v[0].0, v[0].1);
+        let mut cur_depth = v[0].3;
+        let mut cur_deepest_lca = v[0].2;
+        let mut cur_deep_mult: HashMap<u32, u8> = 
+            hashmap! {self.euler_tour[cur_deepest_lca as usize] => 1}; // 1 is just a flag indicating presence
+
+        // go over the rest of the LCAs
+        for (i, j, nid, depth) in v.iter().skip(1) {
+            if *depth > cur_depth {
+                cur_deep_mult.clear();
+                cur_deepest_pair = (*i, *j);
+                cur_depth = *depth;
+                cur_deepest_lca = *nid;
+                cur_deep_mult.insert(self.euler_tour[cur_deepest_lca as usize], 1);
+            } else if *depth == cur_depth {
+                let mult = cur_deep_mult.entry(self.euler_tour[*nid as usize]).or_insert(0);
+                *mult += 1;
+            }
+        }
+        if cur_deep_mult.values().any(|it| *it > 1) {
+            return None;
+        }
+        drop(cur_deep_mult);
+        let ix = bips4_to_ix(Self::mk_bip_quartet(cur_deepest_pair.0, cur_deepest_pair.1));
+        return Some(ix);
+    }
+
+    pub fn retrieve_quintet_topology(&self, eids: &[u32; 5]) -> Option<u8> {
         let mut v: SmallVec<[(u8, u8, u32, u32); 14]> = smallvec![];
         let mut bips: SmallVec<[u8; 2]> = smallvec![];
         for i in 0..4u8 {
@@ -168,7 +219,7 @@ impl TreeLCA {
             return None;
         }
         drop(cur_deep_mult);
-        bips.push(Self::mk_bip(cur_deepest_pair.0, cur_deepest_pair.1));
+        bips.push(Self::mk_bip_quintet(cur_deepest_pair.0, cur_deepest_pair.1));
         for i in 0..5u8 {
             if i == cur_deepest_pair.0 || i == cur_deepest_pair.1 {
                 continue;
@@ -208,13 +259,13 @@ impl TreeLCA {
         }
         match next_deepest_pair {
             (a, 5) => {
-                bips.push(Self::mk_bip3(a, cur_deepest_pair.0, cur_deepest_pair.1));
+                bips.push(Self::mk_bip_quintet3(a, cur_deepest_pair.0, cur_deepest_pair.1));
             }
             (u, v) => {
-                bips.push(Self::mk_bip(u, v));
+                bips.push(Self::mk_bip_quintet(u, v));
             }
         }
-        Some(bips_to_adr_ix(bips[0], bips[1]))
+        Some(bips5_to_adr_ix(bips[0], bips[1]))
     }
 }
 
@@ -328,7 +379,8 @@ impl TreeCollectionWithLCA {
         }
     }
 
-    pub fn translate_taxon_names(
+
+    pub fn translate_taxon_names5(
         &self,
         names: (&str, &str, &str, &str, &str),
     ) -> (usize, usize, usize, usize, usize) {
@@ -339,5 +391,16 @@ impl TreeCollectionWithLCA {
             self.collection.taxon_set.retrieve(names.3),
             self.collection.taxon_set.retrieve(names.4),
         )
+    }
+
+    pub fn translate_taxon_names<const N: usize>(
+        &self,
+        names: [&str; N],
+    ) -> [usize; N] {
+        let mut res = [0; N];
+        for (i, name) in names.iter().enumerate() {
+            res[i] = self.collection.taxon_set.retrieve(name);
+        }
+        res
     }
 }

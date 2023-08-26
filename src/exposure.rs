@@ -24,7 +24,7 @@ impl TreeSet {
 
     pub fn tally_single_quintet(&self, names: (&str, &str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 15];
-        let transl = self.data.translate_taxon_names(names);
+        let transl = self.data.translate_taxon_names5(names);
         for (i, lca) in self.data.lca.iter().enumerate() {
             let quintet = [
                 lca.rev[transl.0],
@@ -36,7 +36,27 @@ impl TreeSet {
             if quintet.iter().any(|it| *it == 0) {
                 continue;
             }
-            if let Some(t) = lca.retrieve_topology(&quintet) {
+            if let Some(t) = lca.retrieve_quintet_topology(&quintet) {
+                res[t as usize] += 1;
+            }
+        }
+        res
+    }
+
+    pub fn tally_single_quartet(&self, names: (&str, &str, &str, &str)) -> Vec<usize> {
+        let mut res = vec![0usize; 3];
+        let transl: [usize; 4] = self.data.translate_taxon_names([names.0, names.1, names.2, names.3]);
+        for (i, lca) in self.data.lca.iter().enumerate() {
+            let quartet = [
+                lca.rev[transl[0]],
+                lca.rev[transl[1]],
+                lca.rev[transl[2]],
+                lca.rev[transl[3]],
+            ];
+            if quartet.iter().any(|it| *it == 0) {
+                continue;
+            }
+            if let Some(t) = lca.retrieve_quartet_topology(&quartet) {
                 res[t as usize] += 1;
             }
         }
@@ -45,7 +65,7 @@ impl TreeSet {
 
     pub fn coalesence_times_by_topology(&self, names: (&str, &str, &str, &str, &str)) -> Vec<f64> {
         let mut res = vec![0.0; 15 + 15 * 10];
-        let transl = self.data.translate_taxon_names(names);
+        let transl = self.data.translate_taxon_names5(names);
         for (i, lca) in self.data.lca.iter().enumerate() {
             let quintet = [
                 lca.rev[transl.0],
@@ -57,7 +77,7 @@ impl TreeSet {
             if quintet.iter().any(|it| *it == 0) {
                 continue;
             }
-            if let Some(t) = lca.retrieve_topology(&quintet) {
+            if let Some(t) = lca.retrieve_quintet_topology(&quintet) {
                 res[t as usize] += 1.0;
                 let start_ix = 15 + 10 * t as usize;
                 let lca_extra = &self.data.lca_extras[i];
@@ -103,7 +123,7 @@ pub struct SingleTree {
 #[pymethods]
 impl SingleTree {
     pub fn retrieve_quintet_type(&self, names: (&str, &str, &str, &str, &str)) -> Option<u8> {
-        let transl = self.treeset.translate_taxon_names(names);
+        let transl = self.treeset.translate_taxon_names5(names);
         let lca = &self.treeset.lca[self.id];
         let quintet = [
             lca.rev[transl.0],
@@ -115,11 +135,26 @@ impl SingleTree {
         if quintet.iter().any(|it| *it == 0) {
             return None;
         }
-        lca.retrieve_topology(&quintet)
+        lca.retrieve_quintet_topology(&quintet)
+    }
+
+    pub fn retrieve_quartet_type(&self, names: (&str, &str, &str, &str)) -> Option<u8> {
+        let transl: [usize; 4] = self.treeset.translate_taxon_names([names.0, names.1, names.2, names.3]);
+        let lca = &self.treeset.lca[self.id];
+        let quartet = [
+            lca.rev[transl[0]],
+            lca.rev[transl[1]],
+            lca.rev[transl[2]],
+            lca.rev[transl[3]],
+        ];
+        if quartet.iter().any(|it| *it == 0) {
+            return None;
+        }
+        lca.retrieve_quartet_topology(&quartet)
     }
 
     pub fn retrieve_all_pairs_distance(&self, names: (&str, &str, &str, &str, &str)) -> Option<Vec<f64>> {
-        let transl = self.treeset.translate_taxon_names(names);
+        let transl = self.treeset.translate_taxon_names5(names);
         let lca = &self.treeset.lca[self.id];
         let lca_extra = &self.treeset.lca_extras[self.id];
         let quintet = [
