@@ -8,6 +8,17 @@ class TreeSet:
     """
     def __init__(self, newick_path: str) -> None : ...
 
+    def tally_single_quartet(self, four_taxa: Tuple[str, str, str, str]) -> List[int]:
+        """
+        Gets empirical gene tree topology counts across all trees.
+        Element i denotes the number of gene trees that display topology number i on the four taxa.
+        """
+
+    def taxa(self) -> List[str]:
+        """
+        Gets the list of taxa names.
+        """
+
     def tally_single_quintet(self, five_taxa: Tuple[str, str, str, str, str]) -> List[int]:
         """
         Gets empirical gene tree topology counts across all trees.

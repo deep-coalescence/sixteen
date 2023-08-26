@@ -21,6 +21,10 @@ impl TreeSet {
     pub fn __len__(&self) -> usize {
         self.data.collection.trees.len()
     }
+    
+    pub fn taxa(&self) -> Vec<&str> {
+        self.data.collection.taxon_set.names.iter().map(|it| it.as_str()).collect()
+    }
 
     pub fn tally_single_quintet(&self, names: (&str, &str, &str, &str, &str)) -> Vec<usize> {
         let mut res = vec![0usize; 15];
